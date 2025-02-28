@@ -92,3 +92,16 @@ export const login = (req, res) => {
     });
   });
 };
+
+export const logOut = (req, res) => {
+  return res
+    .clearCookie("access_token", {
+      secure: true,
+      sameSite: "none",
+    })
+    .status(200)
+    .json({
+      status: "success",
+      message: "User logged out successfully!",
+    });
+};
