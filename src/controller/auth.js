@@ -14,7 +14,9 @@ export const register = (req, res) => {
         .json({ message: "Internal Server Error", status: "error" });
 
     if (data.length > 0)
-      return res.status(409).json({ message: "User already exists!" });
+      return res
+        .status(409)
+        .json({ status: "error", message: "User already exists!" });
 
     if (!password)
       return res
