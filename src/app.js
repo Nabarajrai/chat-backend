@@ -6,6 +6,7 @@ import { Server } from "socket.io"; // Correct import for 'socket.io'
 //routers
 import authRouter from "./routes/auth.js";
 import userRouter from "./routes/user.js";
+import channelRouter from "./routes/channel.js";
 
 const app = express();
 const PORT = "8080";
@@ -89,6 +90,7 @@ app.use(
 //routes
 app.use("/api/auth", authRouter);
 app.use("/api", userRouter);
+app.use("/api", channelRouter);
 
 server.listen(PORT, () => {
   console.log("Server is listening on port " + PORT);
