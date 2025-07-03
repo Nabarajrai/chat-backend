@@ -42,7 +42,7 @@ export const getChannelById = (req, res) => {
         .status(403)
         .json({ message: "Invalid token", status: "error" });
     }
-    const channelId = req.params.id;
+    const channelId = req.params.channelId;
     const query = "SELECT * FROM channels WHERE id = ?";
     db.query(query, [channelId], (err, data) => {
       if (err)
