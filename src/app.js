@@ -33,15 +33,20 @@ io.on("connection", (socket) => {
     console.log(`User joined room ${roomId}`);
   });
 
-  socket.on("send-message-to-user", ({ senderId, receiverId, message }) => {
-    const finalMessage = {
-      data: message,
-      id: new Date().toISOString(),
-      senderId,
-    };
-    console.log("Received message:", message);
-    io.to(`user-${receiverId}`).emit("receive-user-message", finalMessage);
-  });
+  socket.on(
+    "send-message-to-user",
+    ({ senderId, receiverId, message, fullName }) => {
+      const finalMessage = {
+        data: message,
+        id: new Date().toISOString(),
+        senderId,
+        receiverId,
+        fullName,
+      };
+      console.log("Received message:", finalMessage);
+      io.to(`user-${receiverId}`).emit("receive-user-message", finalMessage);
+    }
+  );
 
   socket.on("send-message-to-channel", ({ channelId, message }) => {
     const finalNotification = {
@@ -69,6 +74,9 @@ io.on("connection", (socket) => {
   });
 
   socket.on("close", () => {
+    console.log("Client disconnected");
+  });
+  socket.on("disconnect", () => {
     console.log("Client disconnected");
   });
 });
