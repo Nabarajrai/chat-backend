@@ -7,6 +7,7 @@ import { Server } from "socket.io"; // Correct import for 'socket.io'
 import authRouter from "./routes/auth.js";
 import userRouter from "./routes/user.js";
 import channelRouter from "./routes/channel.js";
+import { db } from "./db/connect.js";
 
 const app = express();
 const PORT = "8080";
@@ -35,7 +36,7 @@ io.on("connection", (socket) => {
 
   socket.on(
     "send-message-to-user",
-    ({ senderId, receiverId, message, fullName }) => {
+    async ({ senderId, receiverId, message, fullName }) => {
       const finalMessage = {
         data: message,
         id: new Date().toISOString(),
@@ -43,8 +44,28 @@ io.on("connection", (socket) => {
         receiverId,
         fullName,
       };
-      console.log("Received message:", finalMessage);
-      io.to(`user-${receiverId}`).emit("receive-user-message", finalMessage);
+
+      console.log("🟡 Received message to send:", finalMessage);
+
+      const room = `user-${receiverId}`;
+
+      io.to(room)
+        .timeout(5000)
+        .emit("receive-user-message", finalMessage, () => {
+          const query =
+            "INSERT INTO private_message (senderId, receiverId, fullName, message) VALUES (?, ?, ?, ?)";
+          db.query(
+            query,
+            [senderId, receiverId, fullName, message],
+            (err, result) => {
+              if (err) {
+                console.error("❌ Failed to save message:", err);
+                return;
+              }
+              console.log("✅ Message saved to DB");
+            }
+          );
+        });
     }
   );
 
@@ -57,10 +78,9 @@ io.on("connection", (socket) => {
       senderId: socket.id, // Assuming the sender's ID is the socket ID
     };
     console.log("Received notification:", message);
-    io.to(`channel-${channelId}`).emit(
-      "receive-message-to-channel",
-      finalNotification
-    );
+    io.to(`channel-${channelId}`)
+      .timeout(5000)
+      .emit("receive-message-to-channel", finalNotification);
   });
 
   socket.on("message", (message) => {
