@@ -48,10 +48,13 @@ io.on("connection", (socket) => {
     }
   );
 
-  socket.on("send-message-to-channel", ({ channelId, message }) => {
+  socket.on("send-message-to-channel", ({ channelId, message, fullName }) => {
     const finalNotification = {
       data: message,
       id: new Date().toISOString(),
+      fullName,
+      channelId,
+      senderId: socket.id, // Assuming the sender's ID is the socket ID
     };
     console.log("Received notification:", message);
     io.to(`channel-${channelId}`).emit(
