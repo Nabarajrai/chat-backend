@@ -69,19 +69,37 @@ io.on("connection", (socket) => {
     }
   );
 
-  socket.on("send-message-to-channel", ({ channelId, message, fullName }) => {
-    const finalNotification = {
-      data: message,
-      id: new Date().toISOString(),
-      fullName,
-      channelId,
-      senderId: socket.id, // Assuming the sender's ID is the socket ID
-    };
-    console.log("Received notification:", message);
-    io.to(`channel-${channelId}`)
-      .timeout(5000)
-      .emit("receive-message-to-channel", finalNotification);
-  });
+  socket.on(
+    "send-message-to-channel",
+    async ({ senderId, channelId, message, fullName, is_read }) => {
+      const finalNotification = {
+        data: message,
+        id: new Date().toISOString(),
+        fullName,
+        channelId,
+        is_read: false, // Assuming is_read is false by default
+        senderId, // Assuming the sender's ID is the socket ID
+      };
+      console.log("Received notification:", finalNotification);
+      io.to(`channel-${channelId}`)
+        .timeout(5000)
+        .emit("receive-message-to-channel", finalNotification, () => {
+          const query =
+            "INSERT INTO channel_message (senderId,channelId,fullName,is_read, message) VALUES (?, ?, ?, ?, ?)";
+          db.query(
+            query,
+            [senderId, channelId, fullName, is_read, message],
+            (err, result) => {
+              if (err) {
+                console.error("❌ Failed to save channel message:", err);
+                return;
+              }
+              console.log("✅ Channel message saved to DB");
+            }
+          );
+        });
+    }
+  );
 
   socket.on("message", (message) => {
     const finalMessage = {
