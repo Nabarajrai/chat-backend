@@ -7,6 +7,7 @@ import { Server } from "socket.io"; // Correct import for 'socket.io'
 import authRouter from "./routes/auth.js";
 import userRouter from "./routes/user.js";
 import channelRouter from "./routes/channel.js";
+import messageRouter from "./routes/message.js";
 import { db } from "./db/connect.js";
 
 const app = express();
@@ -38,7 +39,7 @@ io.on("connection", (socket) => {
     "send-message-to-user",
     async ({ senderId, receiverId, message, fullName }) => {
       const finalMessage = {
-        data: message,
+        message: message,
         id: new Date().toISOString(),
         senderId,
         receiverId,
@@ -73,7 +74,7 @@ io.on("connection", (socket) => {
     "send-message-to-channel",
     async ({ senderId, channelId, message, fullName, is_read }) => {
       const finalNotification = {
-        data: message,
+        message: message,
         id: new Date().toISOString(),
         fullName,
         channelId,
@@ -140,7 +141,7 @@ app.use(
 app.use("/api/auth", authRouter);
 app.use("/api", userRouter);
 app.use("/api", channelRouter);
-
+app.use("/api", messageRouter);
 server.listen(PORT, () => {
   console.log("Server is listening on port " + PORT);
 });
