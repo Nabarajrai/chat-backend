@@ -45,7 +45,56 @@ export const setupSocket = (io) => {
     });
     socket.on("join-room", (roomId) => {
       socket.join(`channel-${roomId}`);
-      console.log(`User joined room ${roomId}`);
+      // select;
+      // c.id,
+      // c.senderId,
+      // c.channelId,
+      // c.message,
+      // c.is_read,
+      // concat(u.firstName,' ',u.lastName)as senderFullName,
+      // c.created_at
+      // from channel_message c
+      // join users u on c.senderId=u.userId
+      // where channelId="C3";
+
+      const query = `select 
+                     c.id,
+                     c.senderId,
+                     c.channelId,
+                     c.message,
+                     c.is_read,
+                     concat(u.firstName,' ',u.lastName)as senderFullName,
+                     c.created_at 
+                     from channel_message c 
+                     join users u on c.senderId=u.userId 
+                     where c.channelId = ?`;
+
+      db.query(query, [roomId], (err, data) => {
+        if (err) {
+          console.error("Error fetching channel messages:", err);
+          return;
+        }
+        if (data.length > 0) {
+          data.forEach((message) => {
+            io.to(`channel-${roomId}`)
+              .timeout(5000)
+              .emit("receive-message-to-channel", message);
+          });
+        }
+        console.log(`Fetched messages for channel ${roomId}:`, data);
+        const messageIds = data.map((msg) => msg.id); // trusted, validated input
+        const placeholders = messageIds.map(() => "?").join(",");
+        const sql = `UPDATE channel_messages SET is_read = true WHERE id IN (${placeholders})`;
+
+        db.query(sql, messageIds, (err, result) => {
+          if (err) {
+            console.error("Error updating channel message status:", err);
+            return;
+          }
+          console.log("Updated successfully");
+        });
+        console.log(`Fetched messages for channel ${roomId}:`, data);
+      });
     });
 
     socket.on(
@@ -112,7 +161,7 @@ export const setupSocket = (io) => {
           is_read: false, // Assuming is_read is false by default
           senderId, // Assuming the sender's ID is the socket ID
         };
-        const clients = io.socket.adapter.room(`channel-${chhanelId}`);
+        const clients = io.socket.adapter.room(`channel-${channelId}`);
         const userOnlineOnChannel = clients && clients.size > 0;
         const query =
           "INSERT INTO channel_message (senderId,channelId,fullName,is_read, message) VALUES (?, ?, ?, ?, ?)";
