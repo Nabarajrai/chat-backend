@@ -13,6 +13,7 @@ export const getMessagesByUser = (req, res) => {
 
   jwt.verify(token, "secret", (err, userInfo) => {
     if (err) {
+      console.log("err", err);
       return res.status(403).json({
         message: "Invalid token",
         status: "error",
@@ -28,16 +29,6 @@ export const getMessagesByUser = (req, res) => {
         status: "error",
       });
     }
-    // SELECT
-    //   pm.id,
-    //   pm.senderId,
-    //   pm.receiverId,
-    //   pm.message,
-    //   pm.is_read,
-    //   CONCAT(u.firstName, ' ', u.lastName) AS senderFullName
-    // FROM private_message pm
-    // JOIN users u ON pm.senderId = u.userId
-    // where senderId = "D5" and receiverId = "D7" or senderId = "D7" and receiverId="D5" ;
     const query = `
     SELECT
       pm.id,
@@ -45,11 +36,13 @@ export const getMessagesByUser = (req, res) => {
       pm.receiverId,
       pm.message,
       pm.is_read,
-      CONCAT(u.firstName, ' ', u.lastName) AS senderFullName
+      CONCAT(u.firstName, ' ', u.lastName) AS senderFullName,
+      pm.created_at
     FROM private_message pm
     JOIN users u ON pm.senderId = u.userId     
     WHERE (senderId = ? AND receiverId = ?) 
          OR (senderId = ? AND receiverId = ?)
+    ORDER BY pm.created_at DESC
     `;
 
     const values = [senderId, receiverId, receiverId, senderId];
