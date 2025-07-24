@@ -28,8 +28,11 @@ export const setupSocket = (io) => {
               .emit("receive-user-message", message);
           });
         }
-        const updateQuery = `UPDATE private_message SET is_read = true WHERE receiverId = ?`;
-        db.query(updateQuery, [userId], (err) => {
+        const userIds = data.map((message) => message.id);
+        console.log(`User IDs to update: ${userIds}`);
+        const updateQuery = `UPDATE private_message SET is_read = true WHERE id IN (?)`;
+
+        db.query(updateQuery, [userIds.join(",")], (err) => {
           if (err) {
             console.error("Error updating message status:", err);
             return;
@@ -42,7 +45,56 @@ export const setupSocket = (io) => {
     });
     socket.on("join-room", (roomId) => {
       socket.join(`channel-${roomId}`);
-      console.log(`User joined room ${roomId}`);
+      // select;
+      // c.id,
+      // c.senderId,
+      // c.channelId,
+      // c.message,
+      // c.is_read,
+      // concat(u.firstName,' ',u.lastName)as senderFullName,
+      // c.created_at
+      // from channel_message c
+      // join users u on c.senderId=u.userId
+      // where channelId="C3";
+
+      const query = `select 
+                     c.id,
+                     c.senderId,
+                     c.channelId,
+                     c.message,
+                     c.is_read,
+                     concat(u.firstName,' ',u.lastName)as senderFullName,
+                     c.created_at 
+                     from channel_message c 
+                     join users u on c.senderId=u.userId 
+                     where c.channelId = ?`;
+
+      db.query(query, [roomId], (err, data) => {
+        if (err) {
+          console.error("Error fetching channel messages:", err);
+          return;
+        }
+        if (data.length > 0) {
+          data.forEach((message) => {
+            io.to(`channel-${roomId}`)
+              .timeout(5000)
+              .emit("receive-message-to-channel", message);
+          });
+        }
+        console.log(`Fetched messages for channel ${roomId}:`, data);
+        const messageIds = data.map((msg) => msg.id); // trusted, validated input
+        const placeholders = messageIds.map(() => "?").join(",");
+        const sql = `UPDATE channel_messages SET is_read = true WHERE id IN (${placeholders})`;
+
+        db.query(sql, messageIds, (err, result) => {
+          if (err) {
+            console.error("Error updating channel message status:", err);
+            return;
+          }
+          console.log("Updated successfully");
+        });
+        console.log(`Fetched messages for channel ${roomId}:`, data);
+      });
     });
 
     socket.on(
@@ -109,24 +161,34 @@ export const setupSocket = (io) => {
           is_read: false, // Assuming is_read is false by default
           senderId, // Assuming the sender's ID is the socket ID
         };
-        console.log("Received notification:", finalNotification);
-        io.to(`channel-${channelId}`)
-          .timeout(5000)
-          .emit("receive-message-to-channel", finalNotification, async () => {
-            const query =
-              "INSERT INTO channel_message (senderId,channelId,fullName,is_read, message) VALUES (?, ?, ?, ?, ?)";
-            db.query(
-              query,
-              [senderId, channelId, fullName, is_read, message],
-              (err, result) => {
-                if (err) {
-                  console.error("❌ Failed to save channel message:", err);
-                  return;
-                }
-                console.log("✅ Channel message saved to DB");
-              }
+        const clients = io.socket.adapter.room(`channel-${channelId}`);
+        const userOnlineOnChannel = clients && clients.size > 0;
+        const query =
+          "INSERT INTO channel_message (senderId,channelId,fullName,is_read, message) VALUES (?, ?, ?, ?, ?)";
+        if (userOnlineOnChannel) {
+          finalNotification.is_read = true; // If user is online, mark as read
+        }
+        const values = [senderId, channelId, fullName, is_read, message];
+        db.query(query, values, (err) => {
+          if (err) {
+            console.error("❌ Failed to save channel message:", err);
+            return;
+          }
+          console.log(
+            "✅ Channel message saved to DB (delivered:",
+            finalNotification.isDelivered,
+            ")"
+          );
+          if (userOnlineOnChannel) {
+            io.to(`channel-${channelId}`)
+              .timeout(5000)
+              .emit("receive-message-to-channel", finalNotification);
+          } else {
+            console.log(
+              "User is offline, message will be delivered when they come online."
             );
-          });
+          }
+        });
       }
     );
 

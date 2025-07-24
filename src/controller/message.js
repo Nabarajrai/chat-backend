@@ -99,10 +99,17 @@ export const getMessageByChanneLId = (req, res) => {
       });
     }
 
-    const query = `
-      SELECT * FROM channel_message 
-      WHERE channelId = ?
-    `;
+    const query = `select 
+                     c.id,
+                     c.senderId,
+                     c.channelId,
+                     c.message,
+                     c.is_read,
+                     concat(u.firstName,' ',u.lastName)as senderFullName,
+                     c.created_at 
+                     from channel_message c 
+                     join users u on c.senderId=u.userId 
+                     where c.channelId = ?`;
 
     db.query(query, [channelId], (err, data) => {
       if (err) {
