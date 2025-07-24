@@ -6,7 +6,8 @@ export const setupSocket = (io) => {
 
     socket.on("join-user", (userId) => {
       socket.join(`user-${userId}`);
-      const query = ` SELECT
+      const query = `
+    SELECT
       pm.id,
       pm.senderId,
       pm.receiverId,
