@@ -31,13 +31,15 @@ export const setupSocket = (io) => {
         }
         const userIds = data.map((message) => message.id);
         console.log(`User IDs to update: ${userIds}`);
-        const updateQuery = `UPDATE private_message SET is_read = true WHERE id IN (?)`;
-
-        db.query(updateQuery, [userIds.join(",")], (err) => {
+        const placeholders = userIds.map(() => "?").join(",");
+        const updateQuery = `UPDATE private_message SET is_read = true WHERE id IN (${placeholders})`;
+        if (userIds.length === 0) {
+          console.log(`No messages to update for user ${userId}`);
+          return;
+        }
+        db.query(updateQuery, userIds, (err) => {
           if (err) {
             console.error("Error updating message status:", err);
-            return;
-          } else {
             console.log(`Updated messages for user ${userId} to read status.`);
           }
         });
@@ -85,7 +87,7 @@ export const setupSocket = (io) => {
         console.log(`Fetched messages for channel ${roomId}:`, data);
         const messageIds = data.map((msg) => msg.id); // trusted, validated input
         const placeholders = messageIds.map(() => "?").join(",");
-        const sql = `UPDATE channel_messages SET is_read = true WHERE id IN (${placeholders})`;
+        const sql = `UPDATE channel_message SET is_read = true WHERE id IN (${placeholders})`;
 
         db.query(sql, messageIds, (err, result) => {
           if (err) {
