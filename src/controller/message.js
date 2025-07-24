@@ -42,7 +42,7 @@ export const getMessagesByUser = (req, res) => {
     JOIN users u ON pm.senderId = u.userId     
     WHERE (senderId = ? AND receiverId = ?) 
          OR (senderId = ? AND receiverId = ?)
-    ORDER BY pm.created_at DESC
+    ORDER BY pm.created_at ASC
     `;
 
     const values = [senderId, receiverId, receiverId, senderId];
@@ -109,7 +109,9 @@ export const getMessageByChanneLId = (req, res) => {
                      c.created_at 
                      from channel_message c 
                      join users u on c.senderId=u.userId 
-                     where c.channelId = ?`;
+                     where c.channelId = ?
+                      order by c.created_at asc
+                     `;
 
     db.query(query, [channelId], (err, data) => {
       if (err) {
