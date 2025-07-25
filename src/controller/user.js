@@ -43,7 +43,8 @@ export const getUserById = (req, res) => {
         .json({ message: "Invalid token", status: "error" });
     }
     const userId = req.params.id;
-    const query = "SELECT * FROM users WHERE userId = ?";
+    const query =
+      "SELECT  userId,concat(firstName,' ',lastName) as fullName,email,avator,created_at FROM users WHERE userId = ?";
     db.query(query, [userId], (err, data) => {
       if (err)
         return res
