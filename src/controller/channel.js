@@ -43,7 +43,8 @@ export const getChannelById = (req, res) => {
         .json({ message: "Invalid token", status: "error" });
     }
     const channelId = req.params.channelId;
-    const query = "SELECT * FROM channels WHERE id = ?";
+    const query =
+      "SELECT id,name as fullName,description,created_by,is_private,created_at,updated_at  FROM channels WHERE id = ?";
     db.query(query, [channelId], (err, data) => {
       if (err)
         return res
