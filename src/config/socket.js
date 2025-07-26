@@ -159,19 +159,27 @@ export const setupSocket = (io) => {
         const finalNotification = {
           message: message,
           id: new Date().toISOString(),
-          fullName,
+          senderFullName: fullName,
           channelId,
           is_read: false, // Assuming is_read is false by default
           senderId, // Assuming the sender's ID is the socket ID
         };
-        const clients = io.socket.adapter.room(`channel-${channelId}`);
+        const clients = io.sockets.adapter.rooms.get(`channel-${channelId}`);
         const userOnlineOnChannel = clients && clients.size > 0;
+        console.log(
+          "User online on channel:",
+          clients,
+          "for channelId:",
+          channelId
+        );
         const query =
-          "INSERT INTO channel_message (senderId,channelId,fullName,is_read, message) VALUES (?, ?, ?, ?, ?)";
+          "INSERT INTO channel_message (senderId,channelId,is_read, message) VALUES (?, ?, ?, ?)";
         if (userOnlineOnChannel) {
           finalNotification.is_read = true; // If user is online, mark as read
         }
-        const values = [senderId, channelId, fullName, is_read, message];
+
+        console.log("finalNotification", finalNotification);
+        const values = [senderId, channelId, is_read, message];
         db.query(query, values, (err) => {
           if (err) {
             console.error("❌ Failed to save channel message:", err);
@@ -179,7 +187,7 @@ export const setupSocket = (io) => {
           }
           console.log(
             "✅ Channel message saved to DB (delivered:",
-            finalNotification.isDelivered,
+            finalNotification.is_read,
             ")"
           );
           if (userOnlineOnChannel) {
