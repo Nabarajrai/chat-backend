@@ -30,24 +30,24 @@ export const getMessagesByUser = (req, res) => {
       });
     }
     const query = `
-SELECT *
-FROM (
-  SELECT
-    pm.id,
-    pm.senderId,
-    pm.receiverId,
-    pm.message,
-    pm.is_read,
-    CONCAT(u.firstName, ' ', u.lastName) AS senderFullName,
-    pm.created_at
-  FROM private_message pm
-  JOIN users u ON pm.senderId = u.userId     
-  WHERE (senderId = ? AND receiverId = ?)
-     OR (senderId = ? AND receiverId = ?)
-  ORDER BY pm.created_at DESC
-  LIMIT 10
-) AS latest
-ORDER BY latest.created_at ASC;
+                SELECT *
+                FROM (
+                  SELECT
+                    pm.id,
+                    pm.senderId,
+                    pm.receiverId,
+                    pm.message,
+                    pm.is_read,
+                    CONCAT(u.firstName, ' ', u.lastName) AS senderFullName,
+                    pm.created_at
+                  FROM private_message pm
+                  JOIN users u ON pm.senderId = u.userId     
+                  WHERE (senderId = ? AND receiverId = ?)
+                    OR (senderId = ? AND receiverId = ?)
+                  ORDER BY pm.created_at DESC
+                  LIMIT 10
+                ) AS latest
+                ORDER BY latest.created_at ASC;
 
     `;
 
@@ -105,19 +105,32 @@ export const getMessageByChanneLId = (req, res) => {
       });
     }
 
-    const query = `select 
-                     c.id,
-                     c.senderId,
-                     c.channelId,
-                     c.message,
-                     c.is_read,
-                     concat(u.firstName,' ',u.lastName)as senderFullName,
-                     c.created_at 
-                     from channel_message c 
-                     join users u on c.senderId=u.userId 
-                     where c.channelId = ?
-                      order by c.created_at desc limit 10
-                     `;
+    const query = `
+                  SELECT 
+                    sub.id,
+                    sub.senderId,
+                    sub.channelId,
+                    sub.message,
+                    sub.is_read,
+                    sub.senderFullName,
+                    sub.created_at
+                  FROM (
+                    SELECT 
+                      c.id,
+                      c.senderId,
+                      c.channelId,
+                      c.message,
+                      c.is_read,
+                      CONCAT(u.firstName, ' ', u.lastName) AS senderFullName,
+                      c.created_at
+                    FROM channel_message c
+                    JOIN users u ON c.senderId = u.userId
+                    WHERE c.channelId = ?
+                    ORDER BY c.created_at DESC
+                    LIMIT 10
+                  ) AS sub
+                  ORDER BY sub.created_at ASC
+                `;
 
     db.query(query, [channelId], (err, data) => {
       if (err) {
